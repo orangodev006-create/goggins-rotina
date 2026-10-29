@@ -1,0 +1,81 @@
+{
+  "_ajuda": "dias: 0=segunda ... 6=domingo. cobra=false -> Goggins não xinga. verificacao: 'prova' (print + janela + OCR) ou 'manual'. janela/ocr: palavras procuradas (minúsculas). meta=true conta pro mínimo do dia.",
+  "coach": {
+    "_ajuda": "quem aparece no popup. foto: caminho a partir da pasta do projeto (vazio = sem foto). recorte: [x, y, largura, altura] da foto, ou null pra usar inteira",
+    "nome": "DAVID GOGGINS",
+    "sigla": "DG",
+    "foto": "imagens/coach.png",
+    "recorte": null
+  },
+  "minimo_metas": 2,
+  "fim_do_dia": { "inicio": "21:30", "fim": "22:00" },
+  "tolerancia_segundos": 120,
+  "silencio_apos_feito_min": 5,
+  "checkin_min": 5,
+  "cobrar_depois_checkin_min": 5,
+  "intervalo_cobranca": 60,
+  "tarefas": [
+    {
+      "id": "coisas",
+      "nome": "Tarefas de casa",
+      "dias": [0, 1, 2, 3, 4],
+      "inicio": "16:00",
+      "fim": "17:00",
+      "cobra": true,
+      "meta": false,
+      "verificacao": "manual"
+    },
+    {
+      "id": "trabalho",
+      "nome": "Trabalho",
+      "dias": [0, 1, 2, 3, 4],
+      "inicio": "17:30",
+      "fim": "19:00",
+      "cobra": true,
+      "meta": true,
+      "verificacao": "prova",
+      "janela": ["trabalho", "planilha", "sheets", "docs", "notion"],
+      "ocr": ["planilha", "relatório", "relatorio", "cliente", "tarefa"],
+      "min_minutos": 30
+    },
+    {
+      "id": "programar",
+      "nome": "Programar",
+      "dias": [0, 1, 2, 3, 4],
+      "inicio": "19:30",
+      "fim": "20:30",
+      "cobra": true,
+      "meta": true,
+      "verificacao": "prova",
+      "janela": ["code", "codium", "kate", "nvim", "vim", "zed", "roblox studio", "vinegar", "github", "konsole", "jetbrains", "pycharm"],
+      "ocr": ["def ", "function", "local ", "import ", "return ", "class ", "const ", "print(", "console.log", "#include", "self.", "=>"],
+      "min_minutos": 20
+    },
+    {
+      "id": "estudar",
+      "nome": "Estudar / ler",
+      "dias": [0, 1, 2, 3, 4],
+      "inicio": "20:30",
+      "fim": "21:30",
+      "cobra": true,
+      "meta": true,
+      "verificacao": "prova",
+      "janela": ["curso", "course", "aula", "okular", "pdf", "epub", "livro", "wikipedia"],
+      "ocr": ["aula", "lesson", "módulo", "modulo", "capítulo", "capitulo", "course"],
+      "min_minutos": 20
+    },
+    {
+      "id": "trabalho_fds",
+      "nome": "Trabalho (opcional)",
+      "dias": [5, 6],
+      "inicio": "14:00",
+      "fim": "18:00",
+      "cobra": false,
+      "meta": false,
+      "verificacao": "prova",
+      "janela": ["trabalho", "planilha", "sheets", "docs", "notion"],
+      "ocr": ["planilha", "relatório", "relatorio", "cliente", "tarefa"],
+      "min_minutos": 15
+    }
+  ]
+}

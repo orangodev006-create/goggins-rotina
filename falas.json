@@ -1,0 +1,18 @@
+{
+  "cobranca": [
+    { "audio": "cobranca_1.mp3", "texto": "Seu bloco começou. Por que ainda tá sentado aí?" },
+    { "audio": "cobranca_2.mp3", "texto": "Ninguém vai te salvar. Levanta e começa." },
+    { "audio": "cobranca_3.mp3", "texto": "Você disse que queria. Prova." },
+    { "audio": "cobranca_4.mp3", "texto": "Cada minuto que você perde, alguém tá passando na sua frente." },
+    { "audio": "cobranca_5.mp3", "texto": "Desculpa é coisa de perdedor. Você é um perdedor?" }
+  ],
+  "parabens": [
+    { "audio": "parabens_1.mp3", "texto": "É isso aí. É disso que eu tô falando. Continua." },
+    { "audio": "parabens_2.mp3", "texto": "Você começou. A maioria nunca começa. Respeito." },
+    { "audio": "parabens_3.mp3", "texto": "Bom. Agora não para. Stay hard!" },
+    { "audio": "parabens_4.mp3", "texto": "Agora sim. Vença quem você era ontem." }
+  ],
+  "fim_dia": [
+    { "audio": "fim_dia.mp3", "texto": "Dia cumprido. Você mereceu descansar. Amanhã, de novo." }
+  ]
+}

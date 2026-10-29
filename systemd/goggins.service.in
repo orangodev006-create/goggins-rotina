@@ -1,0 +1,13 @@
+[Unit]
+Description=Goggins - cobrança da rotina
+After=plasma-workspace.target
+PartOf=graphical-session.target
+
+[Service]
+WorkingDirectory=@DIR@
+ExecStart=/usr/bin/python3 -u -m goggins.daemon
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

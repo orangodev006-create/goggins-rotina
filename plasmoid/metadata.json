@@ -1,0 +1,18 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "goggins-rotina"
+            }
+        ],
+        "Category": "Utilities",
+        "Description": "Painel vermelho estilo David Goggins: hora, sistema, música, tarefas do dia e notificações do Discord",
+        "Icon": "preferences-desktop-color",
+        "Id": "org.goggins.dashboard",
+        "License": "MIT",
+        "Name": "Goggins Dashboard",
+        "Version": "1.0"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
