@@ -768,6 +768,23 @@ PlasmoidItem {
                                     color: root.cSoft
                                     font.pixelSize: 12
                                 }
+                                // abre o "Monte sua rotina"
+                                Kirigami.Icon {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: root.goggins.online
+                                    implicitWidth: 16; implicitHeight: 16
+                                    source: "configure"
+                                    color: engrenagem.containsMouse ? root.cRed2 : root.cSoft
+                                    isMask: true
+                                    MouseArea {
+                                        id: engrenagem
+                                        anchors.fill: parent
+                                        anchors.margins: -4
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.gogginsApi("POST", "/configurar")
+                                    }
+                                }
                             }
                         }
                         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: root.cLinha }
@@ -851,15 +868,37 @@ PlasmoidItem {
                                 }
                             }
 
-                            Text {
+                            Column {
                                 anchors.centerIn: parent
                                 width: parent.width
+                                spacing: 14
                                 visible: !root.goggins.online || (root.goggins.tarefas || []).length === 0
-                                horizontalAlignment: Text.AlignHCenter
-                                wrapMode: Text.Wrap
-                                text: !root.goggins.online ? "Goggins offline.\nsystemctl --user start goggins" : "Hoje é folga. Descansa."
-                                color: root.cSoft
-                                font.pixelSize: 13
+                                Text {
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                    wrapMode: Text.Wrap
+                                    text: !root.goggins.online ? "Goggins offline.\nsystemctl --user start goggins"
+                                          : "Nada pra hoje.\nMonte a sua rotina e escolha o que ele vai cobrar."
+                                    color: root.cSoft
+                                    font.pixelSize: 13
+                                }
+                                Rectangle {
+                                    visible: root.goggins.online
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    implicitWidth: rotuloMontar.implicitWidth + 36
+                                    implicitHeight: 38
+                                    radius: 19
+                                    color: root.cRed
+                                    Text {
+                                        id: rotuloMontar
+                                        anchors.centerIn: parent
+                                        text: "MONTAR MINHA ROTINA"
+                                        color: root.cOnAccent
+                                        font.pixelSize: 13
+                                        font.weight: Font.Bold
+                                    }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.gogginsApi("POST", "/configurar") }
+                                }
                             }
 
                             // caixa: fez ou não fez?

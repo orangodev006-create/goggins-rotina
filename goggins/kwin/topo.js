@@ -1,11 +1,13 @@
 // Fica carregado no KWin: janelas do Goggins sempre por cima, fora da barra de tarefas e no lugar certo
 function arrumar(w) {
     if (!w || w.caption.indexOf("GOGGINS-") !== 0) return;
-    w.keepAbove = true;
-    w.skipTaskbar = true;
-    w.skipSwitcher = true;
-    w.skipPager = true;
-    w.onAllDesktops = true;
+    // a janela de configuração é uma janela normal (aparece na barra, não fica por cima)
+    var config = w.caption === "GOGGINS-CONFIG";
+    w.keepAbove = !config;
+    w.skipTaskbar = !config;
+    w.skipSwitcher = !config;
+    w.skipPager = !config;
+    w.onAllDesktops = !config;
     var tela = workspace.clientArea(KWin.MaximizeArea, w);
     var g = w.frameGeometry;
     var popup = w.caption === "GOGGINS-POPUP";

@@ -1,8 +1,8 @@
 # Goggins Rotina
 
-Um "David Goggins" pro seu Linux. Ele conhece a sua rotina da semana, mostra as tarefas do dia quando você
-liga o PC, pergunta como tá indo e, se você passar do horário sem começar, **aparece a cada minuto
-te cobrando**. Começou a tarefa? Ele para e te parabeniza. Quer marcar como feita? **Prova**: ele
+Um "David Goggins" pro seu Linux. **Você escolhe o que ele vai cobrar**: monta a sua rotina da semana
+numa janela no mesmo estilo dos popups. Depois ele mostra as tarefas do dia quando você liga o PC,
+pergunta como tá indo e, se você passar do horário sem começar, **aparece a cada minuto te cobrando**. Começou a tarefa? Ele para e te parabeniza. Quer marcar como feita? **Prova**: ele
 tira um print na hora e confere se a tarefa está mesmo na tela.
 
 Feito pra **KDE Plasma 6 no Wayland** (testado no Arch Linux). Tudo roda local, sem conta, sem chave de API
@@ -15,6 +15,7 @@ e sem serviço de fora.
 
 | Momento | O que acontece |
 |---|---|
+| Primeira vez | abre a janela **"Monte sua rotina"**: você cria as tarefas, os dias e os horários |
 | Ligou o PC | popup sem som com **as tarefas de hoje** |
 | Começou o bloco de uma tarefa | 5 min calado |
 | 5 min depois | popup sem som: **"Como tá indo aí?"** |
@@ -43,17 +44,30 @@ cd ~/goggins-rotina
 ```
 
 O `install.sh` cria o serviço `goggins` do systemd (ele inicia junto com o Plasma) e instala o painel
-**Goggins Dashboard**. Pra colocar o painel na área de trabalho: botão direito → *Adicionar widgets* →
+**Goggins Dashboard**. Na primeira vez abre a janela **"Monte sua rotina"**: o projeto vem sem nenhuma
+tarefa, quem decide o que vai ser cobrado é você. Pra colocar o painel na área de trabalho: botão direito → *Adicionar widgets* →
 *Goggins Dashboard*. Só quer os popups, sem o painel? `./install.sh --sem-painel`.
+
+## Monte sua rotina
+
+Abra a janela quando quiser: pela engrenagem na aba **tarefas do dia** do painel, ou com
+`./goggins-ctl configurar`. Pra cada tarefa você escolhe:
+
+- **o que** é (ex.: Estudar inglês, Treinar, Programar) e **em quais dias** / **de que horas a que horas**;
+- se ele **cobra** quando você passa do horário;
+- se precisa de **prova com print** pra marcar como feita. Se sim, quais palavras aparecem no **título da janela**
+  da tarefa (ex.: `duolingo`, `code`), quais aparecem **na tela** quando você está fazendo (pro OCR do print)
+  e o **mínimo de minutos** com essa janela ativa.
+
+Ali também dá pra trocar **quem cobra**: o nome e a sigla que aparecem no popup.
 
 ## Personalizar
 
-Tudo é arquivo de texto. Depois de mudar, rode `systemctl --user restart goggins`.
+Tudo é arquivo de texto. Depois de mudar à mão, rode `systemctl --user restart goggins`.
 
-- **`rotina.json`**: as tarefas, os dias (`0` = segunda … `6` = domingo), os horários, quanto tempo mínimo,
-  as palavras que ele procura nas janelas e no print, se a tarefa cobra ou não, e os tempos (`checkin_min`,
-  `cobrar_depois_checkin_min`, `silencio_apos_feito_min`, `intervalo_cobranca` em segundos).
-  Em `"coach"` ficam o nome, a sigla e a foto que aparecem no popup: dá pra trocar o Goggins por quem você quiser.
+- **`rotina.json`**: o que a janela "Monte sua rotina" salva, mais os ajustes gerais em minutos/segundos
+  (`checkin_min`, `cobrar_depois_checkin_min`, `silencio_apos_feito_min`, `intervalo_cobranca`, `minimo_metas`).
+  Em `"coach"` ficam o nome, a sigla e a foto do popup.
 - **`falas.json`**: os textos de cobrança e de parabéns.
 - **`audios/`**: os mp3 de cada fala ([como gravar](audios/LEIA-ME.md)).
 - **`imagens/coach.png`** e **`plasmoid/contents/imagens/capa.png`**: as imagens ([detalhes](imagens/LEIA-ME.md)).
@@ -65,6 +79,7 @@ Tudo é arquivo de texto. Depois de mudar, rode `systemctl --user restart goggin
 ## Comandos
 
 ```bash
+./goggins-ctl configurar        # abre a janela "Monte sua rotina"
 ./goggins-ctl estado            # tarefas de hoje e o que ele está fazendo
 ./goggins-ctl testar cobranca   # mostra um popup de teste (cobranca | parabens | fim_dia)
 ./goggins-ctl log               # acompanha o que ele faz
@@ -84,7 +99,7 @@ goggins/rotina.py     # regras puras (bloco atual, quando cobrar), com testes
 goggins/janelas.py    # lista de janelas via KWin (D-Bus)
 goggins/prova.py      # print + OCR + avaliação
 goggins/kwin/         # scripts do KWin (listar janelas, posicionar popups)
-qml/                  # popup e janela de prova
+qml/                  # popup, janela de prova e "Monte sua rotina"
 plasmoid/             # painel "Goggins Dashboard" (abas discord / tarefas do dia)
 ```
 

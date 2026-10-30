@@ -54,6 +54,7 @@ class Goggins:
         self.popup_desde = 0.0
         self.ultima_cobranca = 0.0
         self.prova_proc: subprocess.Popen | None = None
+        self.config_proc: subprocess.Popen | None = None
         self.prova_tarefa = None
         self.ultimo_tick = time.monotonic()
         self.ticks = 0
@@ -112,6 +113,33 @@ class Goggins:
         if self.janelas:
             for ms in (900, 1800):
                 GLib.timeout_add(ms, self.janelas.arrumar)
+
+    # ---------- configuração ("Monte sua rotina") ----------
+    def abrir_config(self):
+        with self.lock:
+            if self.config_proc and self.config_proc.poll() is None:
+                return
+            self.config_proc = subprocess.Popen(["qml6", str(QML / "Config.qml"), "--", f"porta={PORTA}",
+                                                 *self.coach_args()],
+                                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.arrumar_depois()
+
+    def config(self) -> dict:
+        with self.lock:
+            return {"coach": self.rotina.get("coach", {}), "tarefas": self.rotina.get("tarefas", [])}
+
+    def salvar_config(self, enviado: dict) -> dict:
+        with self.lock:
+            nova, erros = r.normalizar_rotina(self.rotina, enviado)
+            if erros:
+                return {"ok": False, "erros": erros}
+            arquivo = BASE / "rotina.json"
+            tmp = arquivo.with_suffix(".tmp")
+            tmp.write_text(json.dumps(nova, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            tmp.replace(arquivo)
+            self.rotina = nova
+            log("rotina salva:", ", ".join(t["nome"] for t in nova["tarefas"]) or "(vazia)")
+            return {"ok": True, "tarefas": len(nova["tarefas"])}
 
     def prova_aberta(self) -> bool:
         return self.prova_proc is not None and self.prova_proc.poll() is None
@@ -183,7 +211,11 @@ class Goggins:
             self.estado.salvar()
 
     def mostrar_agenda(self):
-        """Ao ligar o PC: as tarefas de hoje, sem som."""
+        """Ao ligar o PC: as tarefas de hoje, sem som. Sem nenhuma tarefa: abre o "Monte sua rotina"."""
+        if not self.rotina.get("tarefas"):
+            self.agenda_mostrada = True
+            self.abrir_config()
+            return False
         with self.lock:
             linhas = []
             for t in self.tarefas_hoje():
@@ -299,6 +331,8 @@ def servidor(g: Goggins):
         def do_GET(self):
             if urlparse(self.path).path == "/estado":
                 return self._json(g.resumo())
+            if urlparse(self.path).path == "/config":
+                return self._json(g.config())
             self._json({"erro": "não existe"}, 404)
 
         def do_POST(self):
@@ -308,6 +342,17 @@ def servidor(g: Goggins):
                 return self._json(g.responder(q.get("tarefa", ""), q.get("fiz") == "1"))
             if u.path == "/provar":
                 return self._json(g.provar(q.get("tarefa", "")))
+            if u.path == "/config":
+                try:
+                    tamanho = int(self.headers.get("Content-Length", 0))
+                    enviado = json.loads(self.rfile.read(min(tamanho, 200_000)) or b"{}")
+                except (ValueError, json.JSONDecodeError):
+                    return self._json({"ok": False, "erros": ["JSON inválido"]}, 400)
+                res = g.salvar_config(enviado)
+                return self._json(res, 200 if res["ok"] else 400)
+            if u.path == "/configurar":
+                g.abrir_config()
+                return self._json({"ok": True})
             if u.path == "/testar" and q.get("tipo") in g.falas:
                 g.falar(q["tipo"])
                 return self._json({"ok": True})

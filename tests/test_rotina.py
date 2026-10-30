@@ -4,7 +4,7 @@ from pathlib import Path
 
 from goggins import rotina as r
 
-ROTINA = r.carregar_rotina(Path(__file__).resolve().parent.parent / "rotina.json")
+ROTINA = r.carregar_rotina(Path(__file__).resolve().parent / "rotina_teste.json")
 QUINTA = date(2026, 10, 29)
 SABADO = date(2026, 10, 31)
 

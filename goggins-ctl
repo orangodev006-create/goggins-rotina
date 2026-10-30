@@ -1,7 +1,8 @@
 #!/bin/sh
-# goggins-ctl estado | testar cobranca|parabens|fim_dia | fiz <tarefa> | naofiz <tarefa> | provar <tarefa> | log
+# goggins-ctl configurar | estado | testar cobranca|parabens|fim_dia | fiz <tarefa> | naofiz <tarefa> | provar <tarefa> | log
 API=http://127.0.0.1:47777
 case "$1" in
+  configurar) curl -s -X POST $API/configurar; echo ;;
   estado) curl -s $API/estado | python3 -m json.tool ;;
   testar) curl -s -X POST "$API/testar?tipo=${2:-cobranca}"; echo ;;
   fiz) curl -s -X POST "$API/responder?tarefa=$2&fiz=1"; echo ;;
