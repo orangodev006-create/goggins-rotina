@@ -18,6 +18,8 @@ class TestNormalizar(unittest.TestCase):
         self.assertEqual(erros, [])
         self.assertEqual(nova["intervalo_cobranca"], 60)
         self.assertEqual(nova["tarefas"][0]["id"], "estudar")
+        nova, _ = normalizar_rotina(BASE, {"tarefas": [tarefa(id="estudar_fds")]})
+        self.assertEqual(nova["tarefas"][0]["id"], "estudar_fds")
         self.assertEqual(BASE["tarefas"], [])  # não mexe no original
 
     def test_ids_unicos_e_sem_acento(self):
@@ -25,12 +27,24 @@ class TestNormalizar(unittest.TestCase):
             tarefa(nome="Ação diária"), tarefa(nome="Ação diária", inicio="20:00", fim="21:00")]})
         self.assertEqual([t["id"] for t in nova["tarefas"]], ["acao-diaria", "acao-diaria-2"])
 
+    def test_tarefa_existente_mantem_id_ao_renomear(self):
+        nova, _ = normalizar_rotina(BASE, {"tarefas": [tarefa(id="estudar", nome="Estudar muito")]})
+        self.assertEqual(nova["tarefas"][0]["id"], "estudar")
+        nova, _ = normalizar_rotina(BASE, {"tarefas": [tarefa(id="estudar_fds")]})
+        self.assertEqual(nova["tarefas"][0]["id"], "estudar_fds")
+
     def test_palavras_de_texto_viram_lista(self):
         nova, erros = normalizar_rotina(BASE, {"tarefas": [tarefa(
             verificacao="prova", janela=" VS Code, github ,, ", ocr="def , Return", min_minutos="15")]})
         self.assertEqual(erros, [])
         t = nova["tarefas"][0]
         self.assertEqual((t["janela"], t["ocr"], t["min_minutos"]), (["vs code", "github"], ["def", "return"], 15))
+
+    def test_mantem_janela_ignorar(self):
+        nova, erros = normalizar_rotina(BASE, {"tarefas": [tarefa(
+            verificacao="prova", janela="planilha", ocr="planilha", janela_ignorar=["com.anthropic.claude"])]})
+        self.assertEqual(erros, [])
+        self.assertEqual(nova["tarefas"][0]["janela_ignorar"], ["com.anthropic.claude"])
 
     def test_erros(self):
         casos = {

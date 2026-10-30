@@ -91,6 +91,13 @@ class TestRotina(unittest.TestCase):
         self.assertTrue(r.janela_bate(tr, ff))
         self.assertFalse(r.janela_bate(tr, ff, so_ativa=True))
 
+    def test_claude_conta_so_onde_a_tarefa_deixa(self):
+        prog = next(t for t in ROTINA["tarefas"] if t["id"] == "programar")
+        tr = next(t for t in ROTINA["tarefas"] if t["id"] == "trabalho")
+        claude = [("com.anthropic.Claude", "Claude", True)]
+        self.assertTrue(r.janela_bate(prog, claude, so_ativa=True))
+        self.assertFalse(r.janela_bate(tr, [("com.anthropic.Claude", "planilha", True)]))
+
     def test_texto_bate(self):
         tr = next(t for t in ROTINA["tarefas"] if t["id"] == "trabalho")
         self.assertEqual(r.texto_bate(tr, "PLANILHA do Cliente"), ["planilha", "cliente"])

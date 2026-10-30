@@ -1,5 +1,6 @@
 """Rotina da semana e as regras de quando o Goggins cobra (lógica pura, sem I/O além de ler o JSON)."""
 import json
+import re
 from datetime import date, datetime
 from pathlib import Path
 
@@ -77,8 +78,8 @@ def janela_bate(tarefa: dict, janelas: list[tuple[str, str, bool]], so_ativa: bo
         if so_ativa and not ativa:
             continue
         classe_l = classe.lower()
-        # o app do Claude mostra títulos de conversas na barra lateral; nunca conta como a tarefa
-        if classe_l == "com.anthropic.claude" or classe_l in ignorar:
+        # janela_ignorar: apps que nunca contam pra essa tarefa (ex.: o Claude em tarefas que não são programar)
+        if classe_l in ignorar:
             continue
         alvo = f"{classe_l} {titulo.lower()}"
         if any(c in alvo for c in chaves):
@@ -149,7 +150,9 @@ def normalizar_rotina(atual: dict, enviado: dict) -> tuple[dict, list[str]]:
             inicio, fim = f"{_minutos(inicio) // 60:02d}:{_minutos(inicio) % 60:02d}", \
                           f"{_minutos(fim) // 60:02d}:{_minutos(fim) % 60:02d}"
 
-        tid = base = _slug(nome)
+        # tarefa que já existia mantém o id (o estado do dia é guardado por ele)
+        antigo = str(t.get("id") or "")
+        tid = base = antigo if re.fullmatch(r"[a-z0-9_-]+", antigo) else _slug(nome)
         k = 2
         while tid in ids:
             tid, k = f"{base}-{k}", k + 1
@@ -160,6 +163,8 @@ def normalizar_rotina(atual: dict, enviado: dict) -> tuple[dict, list[str]]:
                   "verificacao": "prova" if t.get("verificacao") == "prova" else "manual"}
         if nova_t["verificacao"] == "prova":
             nova_t["janela"], nova_t["ocr"] = _palavras(t.get("janela")), _palavras(t.get("ocr"))
+            if t.get("janela_ignorar"):
+                nova_t["janela_ignorar"] = _palavras(t["janela_ignorar"])
             if not nova_t["janela"] or not nova_t["ocr"]:
                 erros.append(f"{rotulo}: com prova, diga o que procurar na janela e no print")
             try:
