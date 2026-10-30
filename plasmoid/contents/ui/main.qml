@@ -13,6 +13,7 @@ import org.kde.coreaddons as KCoreAddons
 import org.kde.kquickcontrolsaddons as KQuickControlsAddons
 import QtMultimedia
 import Qt.labs.folderlistmodel
+import org.kde.plasma.plasma5support as P5Support
 
 PlasmoidItem {
     id: root
@@ -162,25 +163,35 @@ PlasmoidItem {
         if (s < 86400) return Math.floor(s / 3600) + "h"
         return Math.floor(s / 86400) + "d"
     }
-    // ---------- Goggins (daemon em 127.0.0.1:47777) ----------
+    // ---------- Goggins (daemon; fala pelo D-Bus via goggins-ctl, sem rede) ----------
     property string aba: guarda.aba
     onAbaChanged: guarda.aba = aba
     property var goggins: ({ online: false, tarefas: [] })
     property var perguntando: null
     property bool escondidoPelaProva: false
-    function gogginsApi(metodo, caminho, pronto) {
-        const xhr = new XMLHttpRequest()
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState !== XMLHttpRequest.DONE) return
+    // o install.sh liga ~/.local/bin/goggins-ctl à pasta do projeto
+    P5Support.DataSource {
+        id: gogginsCtl
+        engine: "executable"
+        connectedSources: []
+        property var esperando: ({})
+        onNewData: (source, data) => {
+            disconnectSource(source)
+            const pronto = esperando[source]
+            delete esperando[source]
             let obj = null
-            if (xhr.status === 200) { try { obj = JSON.parse(xhr.responseText) } catch (e) {} }
+            try { obj = JSON.parse(data.stdout) } catch (e) {}
             if (pronto) pronto(obj)
         }
-        xhr.open(metodo, "http://127.0.0.1:47777" + caminho)
-        xhr.send()
+    }
+    function gogginsCmd(args, pronto) {
+        const cmd = "\"$HOME/.local/bin/goggins-ctl\" " + args
+        if (gogginsCtl.esperando[cmd] !== undefined) return   // o mesmo pedido ainda não voltou
+        gogginsCtl.esperando[cmd] = pronto || null
+        gogginsCtl.connectSource(cmd)
     }
     function atualizarGoggins() {
-        gogginsApi("GET", "/estado", function (e) {
+        gogginsCmd("json", function (e) {
             root.goggins = e || { online: false, tarefas: [] }
             // a prova fechou: o painel volta
             if (root.escondidoPelaProva && e && !e.prova_aberta) {
@@ -194,7 +205,8 @@ PlasmoidItem {
         const t = perguntando
         perguntando = null
         if (!t) return
-        gogginsApi("POST", "/responder?tarefa=" + t.id + "&fiz=" + (fiz ? 1 : 0), function (r) {
+        // ids de tarefa são só [a-z0-9_-] (o daemon garante), seguros na linha de comando
+        gogginsCmd((fiz ? "fiz " : "naofiz ") + t.id, function (r) {
             // pra não burlar: o painel some enquanto a janela de prova está aberta
             if (r && r.acao === "prova") {
                 root.escondidoPelaProva = true
@@ -782,7 +794,7 @@ PlasmoidItem {
                                         anchors.margins: -4
                                         hoverEnabled: true
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.gogginsApi("POST", "/configurar")
+                                        onClicked: root.gogginsCmd("configurar")
                                     }
                                 }
                             }
@@ -897,7 +909,7 @@ PlasmoidItem {
                                         font.pixelSize: 13
                                         font.weight: Font.Bold
                                     }
-                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.gogginsApi("POST", "/configurar") }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.gogginsCmd("configurar") }
                                 }
                             }
 

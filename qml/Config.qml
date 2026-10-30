@@ -1,4 +1,5 @@
-// "Monte sua rotina": a pessoa escolhe o que o Goggins cobra. Uso: qml6 Config.qml -- porta=47777
+// "Monte sua rotina": a pessoa escolhe o que o Goggins cobra. O daemon abre: qml6 Config.qml -- caixa=file:///…/caixa/
+// Conversa com o daemon por arquivos na caixa (pasta privada), sem rede.
 import QtQuick
 import QtQuick.Window
 import QtQuick.Layouts
@@ -21,7 +22,7 @@ Window {
         }
         return a
     }
-    readonly property string api: "http://127.0.0.1:" + (args.porta || "47777")
+    readonly property string caixa: args.caixa || ""
     readonly property color vermelho: "#e3141f"
     readonly property color texto: "#f1ebeb"
     readonly property color suave: "#a39a9b"
@@ -35,7 +36,9 @@ Window {
     property string aviso: ""
     readonly property var atual: sel >= 0 && sel < tarefas.length ? tarefas[sel] : null
 
-    function pedir(metodo, caminho, corpo, pronto) {
+    property string pedidoId: ""
+
+    function ler(nome, pronto) {
         const xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== XMLHttpRequest.DONE) return
@@ -43,9 +46,13 @@ Window {
             try { obj = JSON.parse(xhr.responseText) } catch (e) {}
             pronto(obj)
         }
-        xhr.open(metodo, api + caminho)
-        if (corpo) xhr.setRequestHeader("Content-Type", "application/json")
-        xhr.send(corpo ? JSON.stringify(corpo) : null)
+        xhr.open("GET", caixa + nome)
+        xhr.send()
+    }
+    function escrever(nome, obj) {
+        const xhr = new XMLHttpRequest()
+        xhr.open("PUT", caixa + nome)
+        xhr.send(JSON.stringify(obj))
     }
     function lista(v) { return Array.isArray(v) ? v.join(", ") : (v || "") }
     function nova() {
@@ -83,18 +90,36 @@ Window {
         aviso = ""
     }
     function salvar() {
-        const enviado = { coach: { nome: fCoach.text, sigla: fSigla.text }, tarefas: tarefas }
-        pedir("POST", "/config", enviado, function (r) {
-            if (!r) { janela.erros = ["O Goggins (daemon) não respondeu. Ele está rodando?"]; return }
-            janela.erros = r.erros || []
-            if (r.ok) {
-                janela.aviso = "Salvo. O Goggins já está cobrando a rotina nova."
-                carregar()
+        pedidoId = String(Date.now())
+        escrever("pedido-config.json", { id: pedidoId, coach: { nome: fCoach.text, sigla: fSigla.text }, tarefas: tarefas })
+        aviso = ""
+        esperando.tentativas = 0
+        esperando.start()
+    }
+    // o daemon olha a caixa a cada segundo e deixa a resposta lá
+    Timer {
+        id: esperando
+        property int tentativas: 0
+        interval: 400; repeat: true
+        onTriggered: {
+            if (++tentativas > 25) {
+                stop()
+                janela.erros = ["O Goggins (daemon) não respondeu. Ele está rodando?"]
+                return
             }
-        })
+            janela.ler("resultado-config.json", function (r) {
+                if (!r || r.id !== janela.pedidoId || !esperando.running) return
+                esperando.stop()
+                janela.erros = r.erros || []
+                if (r.ok) {
+                    janela.aviso = "Salvo. O Goggins já está cobrando a rotina nova."
+                    janela.carregar()
+                }
+            })
+        }
     }
     function carregar() {
-        pedir("GET", "/config", null, function (c) {
+        ler("config.json", function (c) {
             if (!c) { janela.erros = ["O Goggins (daemon) não respondeu. Ele está rodando?"]; return }
             fCoach.text = c.coach.nome || ""
             fSigla.text = c.coach.sigla || ""

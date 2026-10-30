@@ -1,13 +1,8 @@
 #!/bin/sh
-# goggins-ctl configurar | estado | testar cobranca|parabens|fim_dia | fiz <tarefa> | naofiz <tarefa> | provar <tarefa> | log
-API=http://127.0.0.1:47777
+# goggins-ctl configurar | estado | json | testar cobranca|parabens|fim_dia | fiz <tarefa> | naofiz <tarefa> | provar <tarefa> | log
+# Fala com o daemon pelo D-Bus da sessão (não tem servidor HTTP).
+DIR=$(dirname "$(readlink -f "$0")")
 case "$1" in
-  configurar) curl -s -X POST $API/configurar; echo ;;
-  estado) curl -s $API/estado | python3 -m json.tool ;;
-  testar) curl -s -X POST "$API/testar?tipo=${2:-cobranca}"; echo ;;
-  fiz) curl -s -X POST "$API/responder?tarefa=$2&fiz=1"; echo ;;
-  naofiz) curl -s -X POST "$API/responder?tarefa=$2&fiz=0"; echo ;;
-  provar) curl -s -X POST "$API/provar?tarefa=$2" | python3 -m json.tool ;;
-  log) journalctl --user -u goggins -f -o cat ;;
-  *) sed -n 2p "$0" ;;
+  log) exec journalctl --user -u goggins -f -o cat ;;
+  *) cd "$DIR" && exec python3 -m goggins.ctl "$@" ;;
 esac

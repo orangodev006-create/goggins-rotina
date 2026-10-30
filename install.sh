@@ -16,19 +16,22 @@ if [ "$kde" = 0 ] || [ "$XDG_SESSION_TYPE" != "wayland" ]; then
 fi
 
 falta=""
-for c in python3 qml6 qdbus6 spectacle tesseract curl; do
+for c in python3 qml6 qdbus6 spectacle tesseract; do
     command -v "$c" >/dev/null 2>&1 || falta="$falta $c"
 done
 python3 -c "import gi" 2>/dev/null || falta="$falta python-gobject"
 tesseract --list-langs 2>/dev/null | grep -qx por || falta="$falta tesseract-data-por"
 if [ -n "$falta" ]; then
     echo "Faltando:$falta"
-    echo "No Arch: sudo pacman -S python-gobject qt6-declarative qt6-multimedia qt6-tools spectacle tesseract tesseract-data-por curl"
+    echo "No Arch: sudo pacman -S python-gobject qt6-declarative qt6-multimedia qt6-tools spectacle tesseract tesseract-data-por"
     exit 1
 fi
 
 mkdir -p "$HOME/.config/systemd/user"
 sed "s|@DIR@|$DIR|g" "$DIR/systemd/goggins.service.in" > "$HOME/.config/systemd/user/goggins.service"
+# o painel chama o goggins-ctl por este caminho
+mkdir -p "$HOME/.local/bin"
+ln -sf "$DIR/goggins-ctl" "$HOME/.local/bin/goggins-ctl"
 systemctl --user daemon-reload
 systemctl --user enable --now goggins
 echo "✓ serviço goggins ativo (systemctl --user status goggins)"

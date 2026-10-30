@@ -6,14 +6,13 @@ import subprocess
 import threading
 import time
 from datetime import datetime, timedelta
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
 from gi.repository import Gio, GLib
 
 from goggins import prova, rotina as r
+from goggins.canais import AMBIENTE_QML, Caixa, registrar_api
 from goggins.estado import Estado
 from goggins.janelas import NOME, Janelas
 
@@ -21,7 +20,6 @@ BASE = Path(__file__).resolve().parent.parent
 QML = BASE / "qml"
 AUDIOS = BASE / "audios"
 PASTA_ESTADO = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "goggins"
-PORTA = 47777
 TICK = 1
 JANELAS_A_CADA = 3  # ticks
 # hora local do sistema; GOGGINS_FUSO=America/Sao_Paulo (por ex.) força outro fuso
@@ -47,6 +45,7 @@ class Goggins:
         self.rotina = r.carregar_rotina(BASE / "rotina.json")
         self.falas = json.loads((BASE / "falas.json").read_text(encoding="utf-8"))
         self.estado = Estado(PASTA_ESTADO, agora().date())
+        self.caixa = Caixa(PASTA_ESTADO / "caixa")
         self.lock = threading.RLock()
         self.janelas: Janelas | None = None
         self.popup: subprocess.Popen | None = None
@@ -119,8 +118,10 @@ class Goggins:
         with self.lock:
             if self.config_proc and self.config_proc.poll() is None:
                 return
-            self.config_proc = subprocess.Popen(["qml6", str(QML / "Config.qml"), "--", f"porta={PORTA}",
-                                                 *self.coach_args()],
+            self.caixa.limpar("pedido-config.json", "resultado-config.json")
+            self.caixa.escrever("config.json", self.config())
+            self.config_proc = subprocess.Popen(["qml6", str(QML / "Config.qml"), "--", f"caixa={self.caixa.url()}",
+                                                 *self.coach_args()], env=AMBIENTE_QML,
                                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.arrumar_depois()
 
@@ -151,10 +152,34 @@ class Goggins:
             if self.popup and self.popup.poll() is None:
                 self.popup.terminate()
             self.prova_tarefa = tid
-            self.prova_proc = subprocess.Popen(["qml6", str(QML / "Prova.qml"), "--", f"tarefa={tid}", f"porta={PORTA}",
-                                                *self.coach_args()],
+            self.caixa.limpar("pedido-prova.json", "resultado-prova.json")
+            self.caixa.escrever("prova.json", self.info_prova())
+            self.prova_proc = subprocess.Popen(["qml6", str(QML / "Prova.qml"), "--", f"tarefa={tid}",
+                                                f"caixa={self.caixa.url()}", *self.coach_args()], env=AMBIENTE_QML,
                                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.arrumar_depois()
+
+    def info_prova(self) -> dict:
+        """O que a janela de prova mostra: a tarefa e a janela ativa agora."""
+        e = self.resumo()
+        tarefa = next((t for t in e["tarefas"] if t["id"] == self.prova_tarefa), None)
+        return {"tarefa": tarefa, "janela_ativa": e["janela_ativa"]}
+
+    def processar_caixa(self):
+        """Pedidos que as janelas QML deixaram na caixa."""
+        pedido_prova = self.caixa.pegar("pedido-prova.json")
+        if pedido_prova and pedido_prova.get("tarefa"):
+            def provar(p=pedido_prova):
+                res = self.provar(str(p["tarefa"]))
+                self.caixa.escrever("resultado-prova.json", {"id": p.get("id"), **res})
+            threading.Thread(target=provar, daemon=True).start()
+        pedido_config = self.caixa.pegar("pedido-config.json")
+        if pedido_config:
+            res = self.salvar_config(pedido_config)
+            self.caixa.escrever("config.json", self.config())
+            self.caixa.escrever("resultado-config.json", {"id": pedido_config.get("id"), **res})
+        if self.prova_aberta() and self.ticks % JANELAS_A_CADA == 0:
+            self.caixa.escrever("prova.json", self.info_prova())
 
     # ---------- regras ----------
     def tarefas_hoje(self):
@@ -163,6 +188,7 @@ class Goggins:
     def tick(self):
         try:
             self._tick()
+            self.processar_caixa()
         except Exception as e:  # o loop nunca pode morrer
             log("erro no tick:", repr(e))
         return True
@@ -318,68 +344,20 @@ class Goggins:
         return res
 
 
-def servidor(g: Goggins):
-    class H(BaseHTTPRequestHandler):
-        def _json(self, obj, code=200):
-            corpo = json.dumps(obj, ensure_ascii=False).encode()
-            self.send_response(code)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(corpo)))
-            self.end_headers()
-            self.wfile.write(corpo)
-
-        def do_GET(self):
-            if urlparse(self.path).path == "/estado":
-                return self._json(g.resumo())
-            if urlparse(self.path).path == "/config":
-                return self._json(g.config())
-            self._json({"erro": "não existe"}, 404)
-
-        def do_POST(self):
-            u = urlparse(self.path)
-            q = {k: v[0] for k, v in parse_qs(u.query).items()}
-            if u.path == "/responder":
-                return self._json(g.responder(q.get("tarefa", ""), q.get("fiz") == "1"))
-            if u.path == "/provar":
-                return self._json(g.provar(q.get("tarefa", "")))
-            if u.path == "/config":
-                try:
-                    tamanho = int(self.headers.get("Content-Length", 0))
-                    enviado = json.loads(self.rfile.read(min(tamanho, 200_000)) or b"{}")
-                except (ValueError, json.JSONDecodeError):
-                    return self._json({"ok": False, "erros": ["JSON inválido"]}, 400)
-                res = g.salvar_config(enviado)
-                return self._json(res, 200 if res["ok"] else 400)
-            if u.path == "/configurar":
-                g.abrir_config()
-                return self._json({"ok": True})
-            if u.path == "/testar" and q.get("tipo") in g.falas:
-                g.falar(q["tipo"])
-                return self._json({"ok": True})
-            self._json({"erro": "não existe"}, 404)
-
-        def log_message(self, *a):
-            pass
-
-    srv = ThreadingHTTPServer(("127.0.0.1", PORTA), H)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    log(f"API em http://127.0.0.1:{PORTA}")
-
-
 def main():
     g = Goggins()
     loop = GLib.MainLoop()
 
     def pronto(conn, _nome):
         g.janelas = Janelas(conn)
-        log("conectado ao KWin")
+        registrar_api(conn, g)
+        log("conectado ao KWin e ao D-Bus (sem servidor HTTP)")
 
     def perdeu(*_):
         log("não consegui o nome D-Bus (outro daemon rodando?)")
         loop.quit()
 
     Gio.bus_own_name(Gio.BusType.SESSION, NOME, Gio.BusNameOwnerFlags.NONE, pronto, None, perdeu)
-    servidor(g)
     GLib.timeout_add_seconds(TICK, g.tick)
     # espera o KWin carregar o script que posiciona os popups
     GLib.timeout_add_seconds(4, g.mostrar_agenda)

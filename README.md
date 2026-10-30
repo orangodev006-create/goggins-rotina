@@ -55,7 +55,7 @@ O tempo em cima da tarefa é contado olhando, a cada 3 s, qual janela está ativ
 > Arch + KDE Plasma 6 no Wayland.
 
 ```bash
-sudo pacman -S python-gobject qt6-declarative qt6-multimedia qt6-tools spectacle tesseract tesseract-data-por curl
+sudo pacman -S python-gobject qt6-declarative qt6-multimedia qt6-tools spectacle tesseract tesseract-data-por
 git clone https://github.com/orangodev006-create/goggins-rotina.git ~/goggins-rotina
 cd ~/goggins-rotina
 ./install.sh
@@ -106,7 +106,9 @@ systemctl --user stop goggins   # dá um tempo pro Goggins
 
 ## Privacidade
 
-- A API do daemon só escuta em `127.0.0.1:47777` (só o seu PC acessa). É por ela que o painel conversa com ele.
+- **Não tem servidor nem porta de rede.** O painel e o `goggins-ctl` falam com o daemon pelo **D-Bus da sua sessão**,
+  que só programas rodando como o seu usuário alcançam (um site aberto no navegador não consegue mandar comandos).
+  As janelas de prova e de configuração trocam arquivos numa pasta privada (`~/.local/state/goggins/caixa`, permissão 700).
 - Os prints das provas e o estado do dia ficam em `~/.local/state/goggins/`. Nada sai do seu computador.
 
 ## Estrutura

@@ -1,5 +1,6 @@
 // Janela separada de prova: o Goggins só aceita "fiz" com print tirado na hora.
-// Uso: qml6 Prova.qml -- tarefa=trabalho porta=47777
+// Uso (o daemon abre): qml6 Prova.qml -- tarefa=trabalho caixa=file:///…/caixa/
+// Conversa com o daemon por arquivos na caixa (pasta privada), sem rede.
 import QtQuick
 import QtQuick.Window
 import QtQuick.Layouts
@@ -21,7 +22,7 @@ Window {
         }
         return a
     }
-    readonly property string api: "http://127.0.0.1:" + (args.porta || "47777")
+    readonly property string caixa: args.caixa || ""
     readonly property color vermelho: "#e3141f"
 
     property var tarefa: null
@@ -31,7 +32,9 @@ Window {
     property int contagem: 5
     property var resultado: null
 
-    function pedir(metodo, caminho, pronto) {
+    property string pedidoId: ""
+
+    function ler(nome, pronto) {
         const xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== XMLHttpRequest.DONE) return
@@ -39,14 +42,19 @@ Window {
             try { obj = JSON.parse(xhr.responseText) } catch (e) {}
             pronto(obj)
         }
-        xhr.open(metodo, api + caminho)
+        xhr.open("GET", caixa + nome)
         xhr.send()
     }
+    function escrever(nome, obj) {
+        const xhr = new XMLHttpRequest()
+        xhr.open("PUT", caixa + nome)
+        xhr.send(JSON.stringify(obj))
+    }
     function atualizar() {
-        pedir("GET", "/estado", function (e) {
+        ler("prova.json", function (e) {
             if (!e) return
-            janela.janelaAtiva = e.janela_ativa
-            for (const t of e.tarefas) if (t.id === args.tarefa) janela.tarefa = t
+            janela.janelaAtiva = e.janela_ativa || ""
+            if (e.tarefa) janela.tarefa = e.tarefa
         })
     }
     Component.onCompleted: atualizar()
@@ -65,16 +73,36 @@ Window {
             if (--janela.contagem > 0) return
             stop()
             janela.fase = "analisando"
-            janela.pedir("POST", "/provar?tarefa=" + janela.args.tarefa, function (r) {
-                janela.resultado = r || { aprovado: false, checagens: [{ ok: false, motivo: "o Goggins (daemon) não respondeu" }] }
-                janela.fase = "resultado"
-                janela.atualizar()
-            })
+            janela.pedidoId = String(Date.now())
+            janela.escrever("pedido-prova.json", { tarefa: janela.args.tarefa, id: janela.pedidoId })
+            esperando.tentativas = 0
+            esperando.start()
             // volta a aparecer enquanto o OCR roda (o print já foi tirado)
             reaparecer.start()
         }
     }
     Timer { id: reaparecer; interval: 3000; onTriggered: janela.visible = true }
+    // espera o daemon deixar o resultado na caixa (print + OCR levam uns 10 s)
+    Timer {
+        id: esperando
+        property int tentativas: 0
+        interval: 500; repeat: true
+        onTriggered: {
+            if (++tentativas > 120) {
+                stop()
+                janela.resultado = { aprovado: false, checagens: [{ ok: false, motivo: "o Goggins (daemon) não respondeu" }] }
+                janela.fase = "resultado"
+                return
+            }
+            janela.ler("resultado-prova.json", function (r) {
+                if (!r || r.id !== janela.pedidoId || janela.fase !== "analisando") return
+                esperando.stop()
+                janela.resultado = r
+                janela.fase = "resultado"
+                janela.atualizar()
+            })
+        }
+    }
 
     Cartao {
         anchors.fill: parent
