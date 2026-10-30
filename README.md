@@ -23,8 +23,10 @@ Feito pra **KDE Plasma 6 no Wayland**. Tudo roda local, sem conta, sem chave de 
 >
 > Use por sua conta e risco: o software vem sem garantia (veja a [licença](LICENSE)).
 
-> Projeto de fã, sem nenhuma ligação com o David Goggins. Não vem com foto nem voz de ninguém:
-> você coloca as suas (veja [Personalizar](#personalizar)).
+> **Projeto de fã, gratuito e sem fins comerciais**, sem nenhuma ligação com o David Goggins nem
+> aprovação dele. O nome é só uma homenagem: não use como marca e não venda o projeto com esse nome.
+> Não vem com foto nem voz de ninguém: você coloca as suas (veja [Personalizar](#personalizar)), e é
+> responsável por ter o direito de usar o que colocar.
 
 ## Como funciona
 
@@ -65,6 +67,18 @@ O `install.sh` cria o serviço `goggins` do systemd (ele inicia junto com o Plas
 **Goggins Dashboard**. Na primeira vez abre a janela **"Monte sua rotina"**: o projeto vem sem nenhuma
 tarefa, quem decide o que vai ser cobrado é você. Pra colocar o painel na área de trabalho: botão direito → *Adicionar widgets* →
 *Goggins Dashboard*. Só quer os popups, sem o painel? `./install.sh --sem-painel`.
+
+O instalador **não sobrescreve nada que não seja dele**: se já existir um `goggins.service` ou um
+`~/.local/bin/goggins-ctl` de outro programa, ele para sem mexer em nada.
+
+## Desinstalar
+
+```bash
+./uninstall.sh
+```
+
+Para e remove o serviço, o atalho `goggins-ctl`, os scripts do KWin e o painel (tire o widget da área de
+trabalho antes). Pergunta antes de apagar os prints das provas e o histórico; a pasta do projeto fica.
 
 ## Monte sua rotina
 
@@ -109,7 +123,13 @@ systemctl --user stop goggins   # dá um tempo pro Goggins
 - **Não tem servidor nem porta de rede.** O painel e o `goggins-ctl` falam com o daemon pelo **D-Bus da sua sessão**,
   que só programas rodando como o seu usuário alcançam (um site aberto no navegador não consegue mandar comandos).
   As janelas de prova e de configuração trocam arquivos numa pasta privada (`~/.local/state/goggins/caixa`, permissão 700).
-- Os prints das provas e o estado do dia ficam em `~/.local/state/goggins/`. Nada sai do seu computador.
+- **O app tira prints da sua tela** (só quando você pede a prova) e lê o texto deles com OCR, tudo no seu PC.
+  Os prints e o histórico de cada dia ficam em `~/.local/state/goggins/` e **nada sai do seu computador**:
+  sem internet, sem conta, sem telemetria. Os prints se acumulam; apague a pasta `provas/` quando quiser
+  (ou use o `./uninstall.sh`).
+- O Goggins lê o **título da janela ativa** a cada 3 s pra saber se você está na tarefa. O histórico do dia guarda
+  só o tempo contado em cada tarefa, não os títulos. Enquanto a janela de prova está aberta, o título atual fica
+  num arquivo da caixa pra ela mostrar.
 
 ## Estrutura
 

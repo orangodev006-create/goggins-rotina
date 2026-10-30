@@ -27,11 +27,23 @@ if [ -n "$falta" ]; then
     exit 1
 fi
 
+SERVICO="$HOME/.config/systemd/user/goggins.service"
+CTL="$HOME/.local/bin/goggins-ctl"
+# não sobrescreve nada que não foi o Goggins que criou
+if [ -e "$SERVICO" ] && ! grep -q "^# goggins-rotina" "$SERVICO"; then
+    echo "Já existe um $SERVICO que não é deste projeto. Nada foi alterado."
+    exit 1
+fi
+if { [ -e "$CTL" ] || [ -L "$CTL" ]; } && [ "$(readlink "$CTL")" != "$DIR/goggins-ctl" ]; then
+    echo "Já existe um $CTL que não é deste projeto. Nada foi alterado."
+    exit 1
+fi
+
 mkdir -p "$HOME/.config/systemd/user"
-sed "s|@DIR@|$DIR|g" "$DIR/systemd/goggins.service.in" > "$HOME/.config/systemd/user/goggins.service"
+sed "s|@DIR@|$DIR|g" "$DIR/systemd/goggins.service.in" > "$SERVICO"
 # o painel chama o goggins-ctl por este caminho
 mkdir -p "$HOME/.local/bin"
-ln -sf "$DIR/goggins-ctl" "$HOME/.local/bin/goggins-ctl"
+ln -sfn "$DIR/goggins-ctl" "$CTL"
 systemctl --user daemon-reload
 systemctl --user enable --now goggins
 echo "✓ serviço goggins ativo (systemctl --user status goggins)"
@@ -44,3 +56,4 @@ if [ "$1" != "--sem-painel" ]; then
     fi
     echo "✓ painel instalado: clique com o botão direito na área de trabalho → Adicionar widgets → Goggins Dashboard"
 fi
+echo "Pra tirar tudo depois: ./uninstall.sh"

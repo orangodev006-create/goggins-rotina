@@ -1,3 +1,4 @@
+# goggins-rotina: criado pelo install.sh (o uninstall.sh apaga)
 [Unit]
 Description=Goggins - cobrança da rotina
 After=plasma-workspace.target
