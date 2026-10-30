@@ -37,7 +37,7 @@ O tempo em cima da tarefa é contado olhando, a cada 3 s, qual janela está ativ
 
 ```bash
 sudo pacman -S python-gobject qt6-declarative qt6-multimedia qt6-tools spectacle tesseract tesseract-data-por curl
-git clone https://github.com/SEU_USUARIO/goggins-rotina.git ~/goggins-rotina
+git clone https://github.com/orangodev006-create/goggins-rotina.git ~/goggins-rotina
 cd ~/goggins-rotina
 ./install.sh
 ```
