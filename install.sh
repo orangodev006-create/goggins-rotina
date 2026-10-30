@@ -3,6 +3,18 @@
 set -e
 DIR=$(cd "$(dirname "$0")" && pwd)
 
+echo "Goggins Rotina: testado só no Arch Linux com KDE Plasma 6 (Wayland)."
+echo "Leia o README e, se puder, peça pra uma IA revisar os arquivos antes de instalar."
+case "$XDG_CURRENT_DESKTOP" in *KDE*) kde=1 ;; *) kde=0 ;; esac
+if [ "$kde" = 0 ] || [ "$XDG_SESSION_TYPE" != "wayland" ]; then
+    echo
+    echo "⚠ Você está em: desktop=${XDG_CURRENT_DESKTOP:-?} sessão=${XDG_SESSION_TYPE:-?}"
+    echo "  O Goggins precisa do KDE Plasma 6 no Wayland (KWin, Spectacle, widgets do Plasma)."
+    printf "  Instalar mesmo assim? [s/N] "
+    read -r resposta
+    case "$resposta" in s|S|sim|SIM) ;; *) echo "Cancelado."; exit 1 ;; esac
+fi
+
 falta=""
 for c in python3 qml6 qdbus6 spectacle tesseract curl; do
     command -v "$c" >/dev/null 2>&1 || falta="$falta $c"
