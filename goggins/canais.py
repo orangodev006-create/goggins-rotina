@@ -38,8 +38,10 @@ def registrar_api(conn, g):
             ok = args[0] in g.falas and g.falar(args[0])
             responder(inv, {"ok": bool(ok)})
         elif metodo == "Configurar":
-            g.abrir_config()
-            responder(inv, {"ok": True})
+            abrir = getattr(g, "abrir_config", None)
+            if abrir:
+                abrir()
+            responder(inv, {"ok": abrir is not None})
 
     info = Gio.DBusNodeInfo.new_for_xml(API_XML).interfaces[0]
     conn.register_object(CAMINHO_API, info, chamada, None, None)
